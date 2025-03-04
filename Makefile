@@ -7,7 +7,7 @@ sinclude ./scripts/foundation/undertesting.mk
 sinclude ./scripts/project/project.mk
 
 # ==============================================================================
-# Define environment variables
+# Define environment  variables
 
 # get current directory without the full path
 CURRENT_DIR := $(notdir $(patsubst %/,%,$(CURDIR)))
