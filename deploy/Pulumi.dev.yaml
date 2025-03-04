@@ -1,0 +1,5 @@
+encryptionsalt: v1:hMgQ7li7b6g=:v1:H7CB47m3j9D/Ql+x:1HTfdzlXAVN59FBUS2HBlRFFMMrvew==
+config:
+  gcp:project: plpc2-452709
+  deploy:env: dev
+  deploy:admin-email: machilan1@gmail.com

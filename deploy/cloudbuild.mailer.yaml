@@ -1,0 +1,64 @@
+steps:
+  - id: App:Cache
+    name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - >-
+        docker pull $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO_ID/$REPO_NAME/$_SERVICE_NAME:latest || exit 0
+    waitFor: ['-']
+
+  - id: App:Build
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '-t'
+      - >-
+        $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - '-t'
+      - >-
+        $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO_ID/$REPO_NAME/$_SERVICE_NAME:latest
+      - '--cache-from'
+      - >-
+        $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO_ID/$REPO_NAME/$_SERVICE_NAME:latest
+      - .
+      - '-f'
+      - build/mailer.dockerfile
+    waitFor: ['App:Cache']
+
+  - id: App:Push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - >-
+        $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO_ID/$REPO_NAME/$_SERVICE_NAME
+      - '--all-tags'
+    waitFor: ['App:Build']
+
+  - id: App:Deploy
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - $_SERVICE_NAME
+      - '--platform=managed'
+      - >-
+        --image=$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - >-
+        --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
+      - '--region=$_DEPLOY_REGION'
+      - '--quiet'
+    waitFor: ['App:Push']
+
+images:
+  - >-
+    $_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO_ID/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+options:
+  substitutionOption: ALLOW_LOOSE
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+tags:
+  - gcp-cloud-build-deploy-cloud-run
+  - gcp-cloud-build-deploy-cloud-run-managed
+timeout: 600s
