@@ -1,6 +1,7 @@
 package all
 
 import (
+	"github.com/machilan1/plpr2/internal/app/domain/greetapi"
 	"github.com/machilan1/plpr2/internal/app/domain/healthapi"
 	"github.com/machilan1/plpr2/internal/app/sdk/mux"
 	"github.com/machilan1/plpr2/internal/framework/web"
@@ -17,4 +18,9 @@ func (add) Add(app *web.App, cfg mux.Config) {
 		Log: cfg.Log,
 		DB:  cfg.DB,
 	})
+	greetapi.Routes(app, greetapi.Config{
+		Log: cfg.Log,
+		DB:  cfg.DB,
+	})
+
 }
