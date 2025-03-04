@@ -1,0 +1,59 @@
+package {{.DomainL}}api
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "net/http"
+    "strconv"
+
+    "{{.Module}}/internal/business/domain/{{.DomainL}}"
+    "{{.Module}}/internal/framework/web"
+)
+
+type ctxKey int
+
+const (
+    {{.DomainL}}Key ctxKey = iota
+)
+
+func get{{.DomainU}}(ctx context.Context) ({{.DomainL}}.{{.DomainU}}, error) {
+    {{.DomainVar}}, ok := ctx.Value({{.DomainL}}Key).({{.DomainL}}.{{.DomainU}})
+    if !ok {
+        return {{.DomainL}}.{{.DomainU}}{}, fmt.Errorf("{{.DomainL}} not found in context")
+    }
+
+    return {{.DomainVar}}, nil
+}
+
+func set{{.DomainU}}(ctx context.Context, {{.DomainVar}} {{.DomainL}}.{{.DomainU}}) context.Context {
+    return context.WithValue(ctx, {{.DomainL}}Key, {{.DomainVar}})
+}
+
+func {{.DomainL}}Ctx({{.DomainVar}}Core *{{.DomainL}}.Core) web.MidFunc {
+    m := func(next web.HandlerFunc) web.HandlerFunc {
+        h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+            if id := web.Param(r, "{{.DomainL}}ID"); id != "" {
+                {{.DomainVar}}ID, err := strconv.Atoi(id)
+                if err != nil {
+                    return ErrInvalidID
+                }
+
+                {{.DomainVar}}, err := {{.DomainVar}}Core.QueryByID(ctx, {{.DomainVar}}ID)
+                if err != nil {
+                    if errors.Is(err, {{.DomainL}}.ErrNotFound) {
+                        return ErrNotFound
+                    }
+                    return fmt.Errorf("querybyid: {{.DomainL}}ID[%d]: %w", {{.DomainVar}}ID, err)
+                }
+                ctx = set{{.DomainU}}(ctx, {{.DomainVar}})
+            }
+
+            return next(ctx, w, r)
+        }
+
+        return h
+    }
+
+    return m
+}

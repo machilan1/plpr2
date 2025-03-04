@@ -1,0 +1,32 @@
+package {{.DomainL}}api
+
+import (
+    "net/http"
+
+    "{{.Module}}/internal/business/domain/{{.DomainL}}"
+    "{{.Module}}/internal/business/sdk/tran"
+    "{{.Module}}/internal/framework/logger"
+    "{{.Module}}/internal/framework/web"
+)
+
+// Config contains all the mandatory dependencies for this group of handlers.
+type Config struct {
+    Log *logger.Logger
+    TxM tran.TxManager
+    {{.DomainU}} *{{.DomainL}}.Core
+}
+
+// Routes adds specific routes for this group.
+func Routes(app *web.App, cfg Config) {
+    const version = "v1"
+
+    {{.DomainVar}}Ctx := {{.DomainL}}Ctx(cfg.{{.DomainU}})
+
+    hdl := newHandlers(cfg.Log, cfg.TxM, cfg.{{.DomainU}})
+
+    app.HandleFunc(http.MethodGet, version, "/{{.DomainPlural}}", hdl.query)
+    app.HandleFunc(http.MethodGet, version, "/{{.DomainPlural}}/{{"{"}}{{.DomainL}}ID}", hdl.queryByID, {{.DomainVar}}Ctx)
+    app.HandleFunc(http.MethodPost, version, "/{{.DomainPlural}}", hdl.create)
+    app.HandleFunc(http.MethodPatch, version, "/{{.DomainPlural}}/{{"{"}}{{.DomainL}}ID}", hdl.update, {{.DomainVar}}Ctx)
+    app.HandleFunc(http.MethodDelete, version, "/{{.DomainPlural}}/{{"{"}}{{.DomainL}}ID}", hdl.delete, {{.DomainVar}}Ctx)
+}

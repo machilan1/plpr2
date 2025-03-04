@@ -1,0 +1,48 @@
+package {{.DomainL}}db
+
+import (
+    "fmt"
+    "time"
+
+    "{{.Module}}/internal/business/domain/{{.DomainL}}"
+)
+
+// db{{.DomainU}} represents an individual {{.DomainL}}.
+type db{{.DomainU}} struct {
+    ID        int       `db:"{{.DomainL}}_id"`
+    CreatedAt time.Time `db:"created_at"`
+    UpdatedAt time.Time `db:"updated_at"`
+}
+
+func toDB{{.DomainU}}({{.DomainVar}} {{.DomainL}}.{{.DomainU}}) db{{.DomainU}} {
+    db{{.DomainVar}} := db{{.DomainU}}{
+        ID:        {{.DomainVar}}.ID,
+        CreatedAt: {{.DomainVar}}.CreatedAt,
+        UpdatedAt: {{.DomainVar}}.UpdatedAt,
+    }
+
+    return db{{.DomainVar}}
+}
+
+func toCore{{.DomainU}}(db{{.DomainVarU}} db{{.DomainU}}) ({{.DomainL}}.{{.DomainU}}, error) {
+    {{.DomainVar}} := {{.DomainL}}.{{.DomainU}}{
+        ID:        db{{.DomainVarU}}.ID,
+        CreatedAt: db{{.DomainVarU}}.CreatedAt,
+        UpdatedAt: db{{.DomainVarU}}.UpdatedAt,
+    }
+
+    return {{.DomainVar}}, nil
+}
+
+func toCore{{.DomainPluralU}}(db{{.DomainPluralU}} []db{{.DomainU}}) ([]{{.DomainL}}.{{.DomainU}}, error) {
+    {{.DomainVars}} := make([]{{.DomainL}}.{{.DomainU}}, len(db{{.DomainPluralU}}))
+    for i, db{{.DomainVarU}} := range db{{.DomainPluralU}} {
+        var err error
+        {{.DomainVars}}[i], err = toCore{{.DomainU}}(db{{.DomainVarU}})
+        if err != nil {
+            return nil, fmt.Errorf("parse type: %w", err)
+        }
+    }
+
+    return {{.DomainVars}}, nil
+}

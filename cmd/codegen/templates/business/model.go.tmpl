@@ -1,0 +1,15 @@
+package {{.DomainL}}
+
+import "time"
+
+type {{.DomainU}} struct {
+    ID        int
+    CreatedAt time.Time
+    UpdatedAt time.Time
+}
+
+type New{{.DomainU}} struct {
+}
+
+type Update{{.DomainU}} struct {
+}

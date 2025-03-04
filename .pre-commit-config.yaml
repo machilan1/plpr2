@@ -1,0 +1,25 @@
+repos:
+  - repo: local
+    hooks:
+      - id: go-fmt
+        name: go-fmt
+        entry: make fmt
+        language: system
+        types: [go]
+        pass_filenames: false
+        stages: [pre-push]
+      - id: golangci-lint
+        name: golangci-lint
+        entry: make lint
+        language: system
+        types: [go]
+        pass_filenames: false
+        stages: [pre-push]
+
+default_install_hook_types:
+  - commit-msg
+  - pre-commit
+  - pre-merge-commit
+  - pre-push
+  - pre-rebase
+  - prepare-commit-msg

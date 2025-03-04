@@ -1,0 +1,118 @@
+// Package {{.DomainL}} provides support for the {{.DomainL}} domain.
+package {{.DomainL}}
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "time"
+
+    "{{.Module}}/internal/business/sdk/order"
+    {{if .WithPagination -}}
+    "{{.Module}}/internal/business/sdk/paging"
+    {{end -}}
+    "{{.Module}}/internal/business/sdk/tran"
+)
+
+// Set of errors that are known to the business.
+var (
+    ErrNotFound = errors.New("{{.DomainL}} not found")
+)
+
+type Storer interface {
+    NewWithTx(txM tran.TxManager) (Storer, error)
+    {{- if .WithPagination}}
+    Count(ctx context.Context, filter QueryFilter) (int, error)
+    {{- end}}
+    Query(ctx context.Context, filter QueryFilter, orderBy order.By{{if .WithPagination}}, page paging.Page{{end}}) ([]{{.DomainU}}, error)
+    QueryByID(ctx context.Context, {{.DomainL}}ID int) ({{.DomainU}}, error)
+    Create(ctx context.Context, {{.DomainVar}} {{.DomainU}}) (int, error)
+    Update(ctx context.Context, {{.DomainVar}} {{.DomainU}}) error
+    Delete(ctx context.Context, {{.DomainVar}} {{.DomainU}}) error
+}
+
+// ====================================================================================
+
+type Core struct {
+    storer Storer
+}
+
+func NewCore(storer Storer) *Core {
+    return &Core{
+        storer: storer,
+    }
+}
+
+func (c *Core) NewWithTx(txM tran.TxManager) (*Core, error) {
+    storer, err := c.storer.NewWithTx(txM)
+    if err != nil {
+        return nil, err
+    }
+
+    return &Core{
+        storer: storer,
+    }, nil
+}
+{{if .WithPagination}}
+// Count returns the total number of {{.DomainPlural}}.
+func (c *Core) Count(ctx context.Context, filter QueryFilter) (int, error) {
+    return c.storer.Count(ctx, filter)
+}
+{{end}}
+// Query retrieves a list of existing {{.DomainPlural}}.
+func (c *Core) Query(ctx context.Context, filter QueryFilter, orderBy order.By{{if .WithPagination}}, page paging.Page{{end}}) ([]{{.DomainU}}, error) {
+    {{.DomainVars}}, err := c.storer.Query(ctx, filter, orderBy{{if .WithPagination}}, page{{end}})
+    if err != nil {
+        return nil, fmt.Errorf("query: %w", err)
+    }
+
+    return {{.DomainVars}}, nil
+}
+
+// QueryByID finds the {{.DomainL}} by the specified ID.
+func (c *Core) QueryByID(ctx context.Context, {{.DomainL}}ID int) ({{.DomainU}}, error) {
+    {{.DomainVar}}, err := c.storer.QueryByID(ctx, {{.DomainL}}ID)
+    if err != nil {
+        return {{.DomainU}}{}, fmt.Errorf("query: {{.DomainL}}ID[%d]: %w", {{.DomainL}}ID, err)
+    }
+
+    return {{.DomainVar}}, nil
+}
+
+// Create adds a new {{.DomainL}} to the system.
+func (c *Core) Create(ctx context.Context, {{.DomainNewVar}} New{{.DomainU}}) ({{.DomainU}}, error) {
+    now := time.Now()
+
+    {{.DomainVar}} := {{.DomainU}}{
+        CreatedAt: now,
+        UpdatedAt: now,
+    }
+
+    id, err := c.storer.Create(ctx, {{.DomainVar}})
+    if err != nil {
+        return {{.DomainU}}{}, fmt.Errorf("create: %w", err)
+    }
+    {{.DomainVar}}.ID = id
+
+    return {{.DomainVar}}, nil
+}
+
+// Update modifies information about a {{.DomainL}}.
+func (c *Core) Update(ctx context.Context, {{.DomainVar}} {{.DomainU}}, {{.DomainUpdVar}} Update{{.DomainU}}) ({{.DomainU}}, error) {
+    {{.DomainVar}}.UpdatedAt = time.Now()
+
+    if err := c.storer.Update(ctx, {{.DomainVar}}); err != nil {
+        return {{.DomainU}}{}, fmt.Errorf("update: %w", err)
+    }
+
+    return {{.DomainVar}}, nil
+}
+
+// Delete removes the specified {{.DomainL}}.
+func (c *Core) Delete(ctx context.Context, {{.DomainVar}} {{.DomainU}}) error {
+    if err := c.storer.Delete(ctx, {{.DomainVar}}); err != nil {
+        return fmt.Errorf("delete: %w", err)
+    }
+
+    return nil
+}

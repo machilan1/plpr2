@@ -1,0 +1,8 @@
+package {{.DomainL}}api
+
+import "{{.Module}}/internal/business/domain/{{.DomainL}}"
+
+var orderByFields = map[string]string{
+    "createdAt": {{.DomainL}}.OrderByCreatedAt,
+    "updatedAt": {{.DomainL}}.OrderByUpdatedAt,
+}

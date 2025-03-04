@@ -1,0 +1,182 @@
+package {{.DomainL}}api
+
+import (
+    "context"
+    "fmt"
+    "net/http"
+
+    "{{.Module}}/internal/app/sdk/errs"
+    {{if .WithPagination -}}
+    "{{.Module}}/internal/app/sdk/query"
+    {{end -}}
+    "{{.Module}}/internal/business/domain/{{.DomainL}}"
+    "{{.Module}}/internal/business/sdk/order"
+    {{if .WithPagination -}}
+    "{{.Module}}/internal/business/sdk/paging"
+    {{end -}}
+    "{{.Module}}/internal/business/sdk/tran"
+    "{{.Module}}/internal/framework/logger"
+    "{{.Module}}/internal/framework/web"
+)
+
+var (
+    ErrInvalidID = errs.NewTrustedError(fmt.Errorf("invalid {{.DomainL}} ID"), http.StatusBadRequest)
+    ErrNotFound  = errs.NewTrustedError(fmt.Errorf("{{.DomainL}} not found"), http.StatusNotFound)
+)
+
+type handlers struct {
+    log *logger.Logger
+    txM tran.TxManager
+    {{.DomainL}} *{{.DomainL}}.Core
+}
+
+func newHandlers(log *logger.Logger, txM tran.TxManager, {{.DomainL}} *{{.DomainL}}.Core) *handlers {
+    return &handlers{
+        log: log,
+        txM: txM,
+        {{.DomainL}}: {{.DomainL}},
+    }
+}
+
+func (h *handlers) newWithTx(txM tran.TxManager) (*handlers, error) {
+    {{.DomainL}}Core, err := h.{{.DomainL}}.NewWithTx(txM)
+    if err != nil {
+        return nil, err
+    }
+
+    return &handlers{
+        log: h.log,
+        txM: txM,
+        {{.DomainL}}: {{.DomainL}}Core,
+    }, nil
+}
+
+func (h *handlers) query(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+    qp := parseQueryParams(r)
+    {{if .WithPagination}}
+    page, err := paging.Parse(qp.Page, qp.PageSize)
+    if err != nil {
+        return errs.NewTrustedError(err, http.StatusBadRequest)
+    }
+    {{end}}
+    orderBy, err := order.Parse(orderByFields, qp.OrderBy, {{.DomainL}}.DefaultOrderBy)
+    if err != nil {
+        return errs.NewTrustedError(err, http.StatusBadRequest)
+    }
+
+    qf, err := parseQueryFilter(qp)
+    if err != nil {
+        return errs.NewTrustedError(err, http.StatusBadRequest)
+    }
+
+    {{.DomainVars}}, err := h.{{.DomainL}}.Query(ctx, qf, orderBy{{if .WithPagination}}, page{{end}})
+    if err != nil {
+        return fmt.Errorf("query: %w", err)
+    }
+    {{if .WithPagination}}
+    total, err := h.{{.DomainL}}.Count(ctx, qf)
+    if err != nil {
+        return fmt.Errorf("count: %w", err)
+    }
+    {{end}}
+    return web.Respond(ctx, w, {{if .WithPagination}}query.NewResult({{end}}toApp{{.DomainPluralU}}({{.DomainVars}}){{if .WithPagination}}, total, page){{end}}, http.StatusOK)
+}
+
+func (h *handlers) queryByID(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+    {{.DomainVar}}, err := get{{.DomainU}}(ctx)
+    if err != nil {
+        return err
+    }
+
+    return web.Respond(ctx, w, toApp{{.DomainU}}({{.DomainVar}}), http.StatusOK)
+}
+
+func (h *handlers) create(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+    var app AppNew{{.DomainU}}
+    if err := web.Decode(r, &app); err != nil {
+        return errs.NewTrustedError(err, http.StatusBadRequest)
+    }
+
+    {{.DomainNewVar}}, err := toCoreNew{{.DomainU}}(app)
+    if err != nil {
+        return errs.NewTrustedError(err, http.StatusBadRequest)
+    }
+
+    var {{.DomainVar}} {{.DomainL}}.{{.DomainU}}
+    if err := h.txM.RunTx(ctx, func(txM tran.TxManager) error {
+        h, err := h.newWithTx(txM)
+        if err != nil {
+            return err
+        }
+
+        {{.DomainVar}}, err = h.{{.DomainL}}.Create(ctx, {{.DomainNewVar}})
+        if err != nil {
+            return fmt.Errorf("create: {{.DomainVar}}[%+v]: %w", app, err)
+        }
+
+        return nil
+    }); err != nil {
+        return err
+    }
+
+    return web.Respond(ctx, w, toApp{{.DomainU}}({{.DomainVar}}), http.StatusCreated)
+}
+
+func (h *handlers) update(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+    var app AppUpdate{{.DomainU}}
+    if err := web.Decode(r, &app); err != nil {
+        return errs.NewTrustedError(err, http.StatusBadRequest)
+    }
+
+    {{.DomainVar}}, err := get{{.DomainU}}(ctx)
+    if err != nil {
+        return err
+    }
+
+    {{.DomainUpdVar}}, err := toCoreUpdate{{.DomainU}}(app)
+    if err != nil {
+        return errs.NewTrustedError(err, http.StatusBadRequest)
+    }
+
+    if err := h.txM.RunTx(ctx, func(txM tran.TxManager) error {
+        h, err := h.newWithTx(txM)
+        if err != nil {
+            return err
+        }
+
+        {{.DomainVar}}, err = h.{{.DomainL}}.Update(ctx, {{.DomainVar}}, {{.DomainUpdVar}})
+        if err != nil {
+            return fmt.Errorf("update: {{.DomainL}}ID[%d] app[%+v]: %w", {{.DomainVar}}.ID, app, err)
+        }
+
+        return nil
+    }); err != nil {
+        return err
+    }
+
+    return web.Respond(ctx, w, toApp{{.DomainU}}({{.DomainVar}}), http.StatusOK)
+}
+
+func (h *handlers) delete(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+    {{.DomainVar}}, err := get{{.DomainU}}(ctx)
+    if err != nil {
+        return err
+    }
+
+    if err := h.txM.RunTx(ctx, func(txM tran.TxManager) error {
+        h, err := h.newWithTx(txM)
+        if err != nil {
+            return err
+        }
+
+        if err := h.{{.DomainL}}.Delete(ctx, {{.DomainVar}}); err != nil {
+            return fmt.Errorf("delete: {{.DomainL}}ID[%d]: %w", {{.DomainVar}}.ID, err)
+        }
+
+        return nil
+    }); err != nil {
+        return err
+    }
+
+    return web.Respond(ctx, w, nil, http.StatusNoContent)
+}

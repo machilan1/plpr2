@@ -1,0 +1,118 @@
+package {{.DomainL}}_test
+
+import (
+    "context"
+    "errors"
+    "testing"
+    "time"
+
+    "github.com/google/go-cmp/cmp"
+    "{{.Module}}/internal/business/domain/{{.DomainL}}"
+    "{{.Module}}/internal/business/domain/{{.DomainL}}/stores/{{.DomainL}}db"
+    "{{.Module}}/internal/business/sdk/sqldb"
+    "{{.Module}}/internal/business/sdk/testhelper"
+)
+
+var testDatabaseInstance *sqldb.TestInstance
+
+func TestMain(m *testing.M) {
+    testDatabaseInstance = sqldb.MustTestInstance()
+    defer testDatabaseInstance.MustClose()
+    m.Run()
+}
+
+type testSuite struct {
+   {{.DomainL}} *{{.DomainL}}.Core
+}
+
+func newTestSuite(t *testing.T) *testSuite {
+    t.Helper()
+
+    log := testhelper.TestLogger(t)
+    testDB, _ := testDatabaseInstance.NewDatabase(t, log)
+
+    {{.DomainVar}}Core := {{.DomainL}}.NewCore({{.DomainL}}db.NewStore(testDB))
+
+    return &testSuite{
+        {{.DomainL}}: {{.DomainVar}}Core,
+    }
+}
+
+func Test{{.DomainU}}_Lifecycle(t *testing.T) {
+    t.Parallel()
+
+    ctx := context.Background()
+    ts := newTestSuite(t)
+
+    want := {{.DomainL}}.{{.DomainU}}{
+        ID: 1,
+        CreatedAt: time.Now(),
+        UpdatedAt: time.Now(),
+    }
+
+    // Create a new {{.DomainL}}
+    {
+        {{.DomainNewVar}} := {{.DomainL}}.New{{.DomainU}}{
+        }
+        got, err := ts.{{.DomainL}}.Create(ctx, {{.DomainNewVar}})
+        if err != nil {
+            t.Fatalf("failed to create {{.DomainL}}: %v", err)
+        }
+        check{{.DomainU}}(t, got, want)
+    }
+
+    var target {{.DomainL}}.{{.DomainU}}
+    // Read back, should return the saved {{.DomainL}}
+    {
+        got, err := ts.{{.DomainL}}.QueryByID(ctx, want.ID)
+        if err != nil {
+            t.Fatalf("failed to get {{.DomainL}}: %v", err)
+        }
+        check{{.DomainU}}(t, got, want)
+        target = got
+    }
+
+    // Update the {{.DomainL}}
+    {
+        {{.DomainUpdVar}} := {{.DomainL}}.Update{{.DomainU}}{
+        }
+        want.UpdatedAt = time.Now()
+
+        got, err := ts.{{.DomainL}}.Update(ctx, target, {{.DomainUpdVar}})
+        if err != nil {
+            t.Fatalf("failed to update {{.DomainL}}: %v", err)
+        }
+        check{{.DomainU}}(t, got, want)
+    }
+
+    // Read back, should return the updated {{.DomainL}}
+    {
+        got, err := ts.{{.DomainL}}.QueryByID(ctx, want.ID)
+        if err != nil {
+            t.Fatalf("failed to get {{.DomainL}}: %v", err)
+        }
+        check{{.DomainU}}(t, got, want)
+    }
+
+    // Delete the {{.DomainL}}
+    {
+        if err := ts.{{.DomainL}}.Delete(ctx, target); err != nil {
+            t.Fatalf("failed to delete {{.DomainL}}: %v", err)
+        }
+    }
+
+    // Read back, should return an error
+    {
+        if _, err := ts.{{.DomainL}}.QueryByID(ctx, want.ID); !errors.Is(err, {{.DomainL}}.ErrNotFound) {
+            t.Fatalf("got err: %v, want: %v", err, {{.DomainL}}.ErrNotFound)
+        }
+    }
+}
+
+func check{{.DomainU}}(t *testing.T, got, want {{.DomainL}}.{{.DomainU}}) {
+    t.Helper()
+
+    if diff := cmp.Diff(got, want, sqldb.ApproxTime); diff != "" {
+        t.Errorf("mismatch (-got +want):\n%s", diff)
+    }
+}

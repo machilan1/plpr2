@@ -1,0 +1,35 @@
+package {{.DomainL}}api
+
+import (
+    "net/http"
+
+    "{{.Module}}/internal/business/domain/{{.DomainL}}"
+)
+
+type QueryParams struct {
+    {{if .WithPagination -}}
+    Page     string
+    PageSize string
+    {{end -}}
+    OrderBy  string
+}
+
+func parseQueryParams(r *http.Request) QueryParams {
+    values := r.URL.Query()
+
+    filter := QueryParams{
+        {{if .WithPagination -}}
+        Page:     values.Get("page"),
+        PageSize: values.Get("pageSize"),
+        {{end -}}
+        OrderBy:  values.Get("orderBy"),
+    }
+
+    return filter
+}
+
+func parseQueryFilter(qp QueryParams) ({{.DomainL}}.QueryFilter, error) {
+    filter := {{.DomainL}}.QueryFilter{}
+
+    return filter, nil
+}

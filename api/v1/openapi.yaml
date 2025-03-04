@@ -1,0 +1,22 @@
+openapi: 3.0.3
+info:
+  title: Go API
+  description: A simple API developed in Go
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:3000/v1'
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok

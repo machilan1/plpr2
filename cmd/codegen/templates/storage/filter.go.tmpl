@@ -1,0 +1,16 @@
+package {{.DomainL}}db
+
+import (
+    "strings"
+
+    "{{.Module}}/internal/business/domain/{{.DomainL}}"
+)
+
+func (s *Store) applyFilter(filter {{.DomainL}}.QueryFilter, data map[string]any, sb *strings.Builder) {
+    var wc []string
+
+    if len(wc) > 0 {
+        sb.WriteString(" WHERE ")
+        sb.WriteString(strings.Join(wc, " AND "))
+    }
+}

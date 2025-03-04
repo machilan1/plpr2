@@ -1,0 +1,9 @@
+<component name="ProjectCodeStyleConfiguration">
+  <code_scheme name="Project" version="173">
+    <SqlCodeStyleSettings version="7">
+      <option name="KEYWORD_CASE" value="2" />
+      <option name="INSERT_EL_WRAP" value="2" />
+      <option name="TABLE_NULLABILITIES_ALIGN" value="false" />
+    </SqlCodeStyleSettings>
+  </code_scheme>
+</component>

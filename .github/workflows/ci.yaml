@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'go.*'
+      - 'internal/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'go.*'
+      - 'internal/**'
+  workflow_dispatch:
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: './go.mod'
+
+      - name: go-test
+        shell: bash
+        run: make test-acc
+
+      - name: go-coverage
+        shell: bash
+        run: |-
+          OUTPUT="$(make test-coverage)"
+          TOTAL="$(echo $OUTPUT | awk 'END{print $NF}')"
+          echo "::group::Coverage (${TOTAL})"
+          echo "${OUTPUT}"
+          echo "::endgroup::"
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        linter:
+          - go-lint
+          - go-generate-check
+          - go-vulnerability-check
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: './go.mod'
+
+      - name: Download tools
+        run: make dev-gotooling-ci
+
+      - name: go-lint
+        shell: bash
+        run: |-
+          set -eEu
+          set +o pipefail
+          make lint
+
+      - name: go-generate-check
+        shell: bash
+        run: |-
+          set -eEu
+          set +o pipefail
+          make generate-check
+
+      - name: go-vulnerability-check
+        shell: bash
+        run: |-
+          set -eEu
+          set +o pipefail
+          make vuln-check
