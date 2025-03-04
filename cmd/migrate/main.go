@@ -26,7 +26,7 @@ type config struct {
 		Host         string `conf:"default:database-service"`
 		Name         string `conf:"default:postgres"`
 		MaxIdleConns int    `conf:"default:0"`
-		MaxOpenConns int    `conf:"default:0"`
+		MaxOpenConns int    `conf:"default:3"`
 		DisableTLS   bool   `conf:"default:true"`
 		TimeZone     string `conf:"default:Asia/Taipei"`
 		// Only set if using CloudSQL. When set, the CloudSQL connector will be used, and `Password`, `Hos`, `DisableTLS`
