@@ -207,3 +207,31 @@ dev-resetdb:
 	-@$(MAKE) dev-migrate-down-all
 	-@$(MAKE) dev-migrate-up
 	-@$(MAKE) dev-run-seed-all
+
+cloudsql-proxy:
+	@docker run -p $$CLOUD_SQL_DB_PORT:5432 --rm gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest "$$CLOUD_SQL_CONNECTION_NAME" \
+			--address 0.0.0.0 \
+			--auto-iam-authn \
+			--token "$(shell gcloud auth application-default print-access-token)" \
+			--login-token "$(shell gcloud sql generate-login-token)"
+
+# Connection without IAM
+cloudsql-proxy-raw:
+	@docker run -p $$CLOUD_SQL_DB_PORT:5432 --rm gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest "$$CLOUD_SQL_CONNECTION_NAME" \
+			--address 0.0.0.0 \
+			--token "$(shell gcloud auth application-default print-access-token)"
+
+# Must run `cloudsql-proxy` before running this command
+cloudsql-psql:
+	@PGSSLMODE=disable psql -h 127.0.0.1 -p $$CLOUD_SQL_DB_PORT -d $$CLOUD_SQL_DB_NAME -U $(shell gcloud config get-value account)
+
+cloudsql-migrate-up:
+	go run cmd/migrate/main.go --db-name=$$CLOUD_SQL_DB_NAME --db-cloud-sql-connection-name=$$CLOUD_SQL_CONNECTION_NAME --db-user=$(shell gcloud config get-value account) --db-host=127.0.0.1:$$CLOUD_SQL_DB_PORT | go run cmd/logfmt/main.go
+
+cloudsql-migrate-down:
+	go run cmd/migrate/main.go --db-name=$$CLOUD_SQL_DB_NAME --db-cloud-sql-connection-name=$$CLOUD_SQL_CONNECTION_NAME --db-user=$(shell gcloud config get-value account) --db-host=127.0.0.1:$$CLOUD_SQL_DB_PORT --migration-down=true --migration-version=0 | go run cmd/logfmt/main.go
+
+cloudsql-seed:
+	go run cmd/seed/main.go --db-name=$$CLOUD_SQL_DB_NAME --db-cloud-sql-connection-name=$$CLOUD_SQL_CONNECTION_NAME --db-user=$(shell gcloud config get-value account) --db-host=127.0.0.1:$$CLOUD_SQL_DB_PORT | go run cmd/logfmt/main.go
+
+# ======================================================================================================================

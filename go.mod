@@ -19,7 +19,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/pulumi/pulumi-command/sdk v1.0.2
 	github.com/pulumi/pulumi-gcp/sdk/v7 v7.38.0
-	github.com/pulumi/pulumi-gcp/sdk/v8 v8.20.0
+	github.com/pulumi/pulumi-gcp/sdk/v8 v8.20.1
 	github.com/pulumi/pulumi-postgresql/sdk/v3 v3.15.0
 	github.com/pulumi/pulumi-random/sdk/v4 v4.18.0
 	github.com/pulumi/pulumi/sdk/v3 v3.153.1
